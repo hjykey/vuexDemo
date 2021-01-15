@@ -8,12 +8,35 @@ export default new Vuex.Store({
   // 数据，状态
   state: {
     count: 0,
-    list: []
+    list: [],
+    inputValue: "aaa",
+    nextId: 5,
+    viewKey: "all"
   },
   // 相当于vue里的计算属性， 接受 state 作为其第一个参数
   getters: {
     shownum(state) {
       return "当前最新的counter值为：【" + state.count + "】";
+    },
+    unDoneItemLength(state) {
+      return state.list.filter(item => {
+        return !item.done;
+      }).length;
+    },
+    viewList(state) {
+      let list = [];
+      switch (state.viewKey) {
+        case "unDone":
+          list = state.list.filter(item => !item.done);
+          break;
+        case "done":
+          list = state.list.filter(item => item.done);
+          break;
+        default:
+          list = state.list;
+          break;
+      }
+      return list;
     }
   },
   // 同步更新数据或状态的方法，第一个形参永远是state
@@ -27,8 +50,40 @@ export default new Vuex.Store({
     sub(state, n) {
       state.count -= n;
     },
-    addList(state, attr) {
-      state.list.push(...attr);
+    initList(state, list) {
+      state.list = list;
+    },
+    addList(state) {
+      let obj = {
+        done: false,
+        id: state.nextId,
+        info: state.inputValue.trim()
+      };
+      state.list.push(obj);
+      state.nextId++;
+      state.inputValue = "";
+      // console.log(state.list);
+    },
+    removeItemFromList(state, id) {
+      // state.list.forEach((item, index) => {
+      //   if (item.id === id) state.list.splice(index, 1);
+      // });
+      const i = state.list.findIndex(x => x.id === id);
+      if (i >= 0) state.list.splice(i, 1);
+    },
+    updateList(state, payload) {
+      const i = state.list.findIndex(x => x.id === payload.id);
+      if (i >= 0) state.list[i].done = payload.status;
+    },
+    handleInputChange(state, $event) {
+      state.inputValue = $event.target.value;
+      // console.log($event);
+    },
+    changeViewKey(state, val) {
+      state.viewKey = val;
+    },
+    clearDone(state) {
+      state.list = state.list.filter(x => !x.done);
     }
   },
   // 异步执行,触发一个mutations的函数变更状态,参数context是一个与 store 实例具有相同方法和属性的对象
@@ -52,8 +107,7 @@ export default new Vuex.Store({
     },
     getList(context) {
       Axios.get("/list.json").then(({ data: res }) => {
-        context.commit("addList", res);
-        // console.log(context.state.list);
+        context.commit("initList", res);
       });
     }
   },
